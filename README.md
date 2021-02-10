@@ -20,6 +20,10 @@ The solution is built on Python3 and uses a GMail API key to read the emails.
 2. Enable the GMail API on GCP
 Follow the guide (here)[https://developers.google.com/gmail/api/quickstart/python]
 
-`pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib`
+3. Create a `config` folder within this repo root
 
+4. Download the credentials json and save it into the `config` folder
+
+5. Run the program
+`$ py3 download.py`
 
