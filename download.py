@@ -87,6 +87,7 @@ def get_labels(service: discovery.Resource) -> Sequence[str]:
     """
 
     results = service.users().labels().list(userId='me').execute()
+    print(results)
     labels = results.get('labels', [])
 
     if not labels:
@@ -107,14 +108,41 @@ def display_labels(labels) -> None:
         print(label['name'])
 
 
+
+def get_emails(service: discovery.Resource, query: str, page_token=None) -> None:
+    """ Fetches the emails corresponding to the specified query.
+    
+    Args: 
+        service: The service representing the gmail resource
+        query: The string for the search query
+        page_token: The token to fetch the next page of results
+
+    Returns:
+        An iterator of emails matching the given query
+    """
+
+    results = service.users().threads().list(userId='me', q=query, pageToken = page_token).execute()
+    if not page_token:
+        print('Retrieved (approx) {} threads'.format(results['resultSizeEstimate']))
+    
+    print('Processing {} {} thread(s)'.format(
+        'first' if not page_token else 'next', 
+        len(results['threads'])))
+
+    threads = results.get('threads', [])
+    # i = 0
+    # if not threads:
+    #     yield threads[i]
+    
+
+
 def main(argv: Sequence[str]) -> None:
     del argv
 
     creds = get_credentials()
     service = get_gmail_service(creds)
-    labels = get_labels(service)
-    if labels:
-        display_labels(labels) 
+    emails = get_emails(service, 'subject:(Daily Coding Problem)')
+
 
 
 if __name__ == '__main__':
