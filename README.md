@@ -14,3 +14,12 @@ Daily Coding Problem if you like the content they provide.
 ## How to run
 The solution is built on Python3 and uses a GMail API key to read the emails.
 
+1. Install the project dependencies
+`$ pip install -r requirements.txt`
+
+2. Enable the GMail API on GCP
+Follow the guide (here)[https://developers.google.com/gmail/api/quickstart/python]
+
+`pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib`
+
+
