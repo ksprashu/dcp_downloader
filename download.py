@@ -6,8 +6,13 @@ from typing import Tuple
 from typing import Generator
 
 import base64
-import pickle
+import functools
+import operator
 import os.path
+import pickle
+import re
+
+from bs4 import BeautifulSoup
 
 from googleapiclient import discovery
 from google_auth_oauthlib import flow
@@ -39,6 +44,11 @@ class BadMessageIdError(Error):
     """
 
 
+class TooManyHtmlStrings(Error):
+    """The HTML body has more than expected strings.
+    """
+
+
 def get_credentials() -> credentials.Credentials:
     """Gets the credentials for connecting to GMail API.
 
@@ -60,7 +70,7 @@ def get_credentials() -> credentials.Credentials:
 
     # if no valid creds then get new ones
     if not creds or not creds.valid:
-        logging.warn('Token not available or not valid')
+        logging.warning('Token not available or not valid')
         if creds and creds.expired and creds.refresh_token:
             logging.info('Refreshing the token')
             creds.refresh(requests.Request())
@@ -111,7 +121,7 @@ def get_labels(service: discovery.Resource) -> Sequence[str]:
     labels = results.get('labels', [])
 
     if not labels:
-        logging.warn('No labels found!')
+        logging.warning('No labels found!')
 
     return labels
 
@@ -170,7 +180,7 @@ def get_emails(service: discovery.Resource, query: str) -> Generator[str, None, 
 
     messages, next_page_token = _get_emails(service, query)
     if not messages:
-        logging.warn('No messages matching the filter "%s"', query)
+        logging.warning('No messages matching the filter "%s"', query)
         return
 
     collected_messages = []
@@ -206,14 +216,88 @@ def get_email_content(service: discovery.Resource, id: str) -> str:
     """
 
     logging.info('Fetching content of email: %s', id)
-    message = service.users().messages().get(userId='me', id=id, format='raw').execute()
+    message = service.users().messages().get(userId='me', id=id).execute()
 
     if not message:
         raise BadMessageIdError('Cannot find an email with the provided id', id)
 
-    body = message.get('raw', [])
+    payload = message.get('payload', None)
+    return payload
 
-    return body
+
+def filter_html_part(part) -> bool:
+    """Filter function: Returns true if the header has content-type = text/html.
+
+    Args:
+        part: The MessagePart object of the email
+    """
+
+    headers = part.get('headers', [])
+    content_type_headers = filter(lambda h: h.get('name', None) == 'Content-Type', headers)
+    content_types = map(lambda t: t.get('value', None), content_type_headers)
+
+    return True if 'text/html' in content_types else False
+
+
+def get_html_from_payload(payload) -> Sequence[str]:
+    """Parses the contents of the email and gets the link to the solution.
+
+    Args:
+        email: The email content string
+
+    Returns:
+        List of html strings
+
+    Raises:
+        TooManyHtmlStrings: In case there is more than one html string
+    """
+
+    logging.info('Fetching html from payload')
+    parts = payload.get('parts', [])
+    html_parts = filter(filter_html_part, parts)
+    html_bodies = map(lambda p: p.get('body', None), html_parts)
+    html_data = map(lambda b: b.get('data', None), html_bodies)
+    html_strings = map(lambda d: base64.urlsafe_b64decode(d), html_data)
+
+
+    # There should be only one html string in the content
+    # So return the last one and raise exception if there are more
+    count = 0
+    for s in html_strings:
+        count += 1
+
+    if count > 1:
+        raise TooManyHtmlStrings('Found %d html strings in the email' % count)
+    
+    if not count:
+        logging.warning('No html content in payload')
+        return None
+
+    return s
+
+
+def get_links_from_html(html: Sequence[str]) -> str:
+    """Returns the link to the solution contained in the html.
+
+    Uses beautiful soup and converts the html into an object.
+    Then looks for the link to the solution and returns in.
+
+    Args:
+        html: The content as a list of html
+
+    Returns:
+        A list of extracted links
+    """
+
+    logging.info('Extracting the links from the html')
+    soup = BeautifulSoup(html, 'html.parser')
+    link_tags = soup.find_all('a')
+    links = map(lambda l: l.get('href'), link_tags)
+
+    # getting only links where it is linked to a solution
+    links = filter(lambda l: re.search('dailycodingproblem.com/solution', l), links)
+
+    return links
 
 
 def main(argv: Sequence[str]) -> None:
@@ -224,9 +308,34 @@ def main(argv: Sequence[str]) -> None:
         service = get_gmail_service(creds)
         # get_labels(service)
         emails = get_emails(service, 'subject:(Daily Coding Problem)')
-        for id in emails:
-            print(get_email_content(service, id))
-            break
+        payload = map(lambda c: get_email_content(service, c), emails)
+        html_data = map(get_html_from_payload, payload)
+        html_data = filter(lambda h: h != None, html_data)
+        links = map(get_links_from_html, html_data)
+
+        # flatten the list of links
+        # links = functools.reduce(operator.iconcat, links, [])
+        count = 0
+        for l in links:
+            for e in l:
+                print(e)
+
+            count += 1
+            if count == 5:
+                break
+
+        # 
+
+        # for l in links:
+        #     print(l)
+        #     break
+
+        # for id in emails:
+        #     payload = get_email_content(service, id)
+        #     html = get_html_from_payload(payload)
+        #     get_links_from_html(html)
+            
+        #     break
 
     except:
         logging.exception('Uncaught exception occurred')
