@@ -5,6 +5,7 @@ from typing import Sequence
 from typing import Tuple
 from typing import Generator
 
+import base64
 import pickle
 import os.path
 
@@ -17,7 +18,6 @@ from absl import app
 from absl import flags
 from absl import logging
 
-
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 _TOKEN_FILE = flags.DEFINE_string(
     'token_file',
@@ -27,6 +27,16 @@ _CRED_FILE = flags.DEFINE_string(
     'credential_file',
     'config/credentials.json',
     'The path to the credential file')
+
+
+class Error(Exception):
+    """Base class for all exceptions in this module.
+    """
+
+
+class BadMessageIdError(Error):
+    """The provided email message id is invalid.
+    """
 
 
 def get_credentials() -> credentials.Credentials:
@@ -127,24 +137,24 @@ def _get_emails(service: discovery.Resource, query: str, page_token=None) -> Tup
         page_token: The token to fetch the next page of results
 
     Returns:
-        Tuple containing a list of threads and the next page token if available
+        Tuple containing a list of messages and the next page token if available
     """
 
     logging.info('Searching emails for query: "%s"', query)
     logging.info('Using pagination: %s', page_token != None)
 
-    results = service.users().threads().list(userId='me', q=query, pageToken = page_token).execute()
+    results = service.users().messages().list(userId='me', q=query, pageToken = page_token).execute()
     if not page_token:
-        logging.info('Retrieved (approx) %d threads', results['resultSizeEstimate'])
+        logging.info('Retrieved (approx) %d messages', results['resultSizeEstimate'])
 
-    threads = results.get('threads', [])
+    messages = results.get('messages', [])
     next_page_token = results.get('nextPageToken', None)
 
-    logging.info('Retrieved %s %d thread(s)', 
+    logging.info('Retrieved %s %d message(s)', 
         'first' if not page_token else 'next',
-        len(threads))
+        len(messages))
 
-    return (threads, next_page_token)
+    return (messages, next_page_token)
     
 
 def get_emails(service: discovery.Resource, query: str) -> Generator[str, None, None]:
@@ -158,30 +168,30 @@ def get_emails(service: discovery.Resource, query: str) -> Generator[str, None, 
         An iterator of emails ids matching the given query
     """
 
-    threads, next_page_token = _get_emails(service, query)
-    if not threads:
-        logging.warn('No threads matching the filter "%s"', query)
+    messages, next_page_token = _get_emails(service, query)
+    if not messages:
+        logging.warn('No messages matching the filter "%s"', query)
         return
 
-    collected_threads = []
-    collected_threads.extend(threads)
+    collected_messages = []
+    collected_messages.extend(messages)
 
     i = 0
-    thread_count = len(collected_threads)
+    message_count = len(collected_messages)
 
-    for thread in collected_threads:
-        yield thread['id']
+    for message in collected_messages:
+        yield message['id']
         i += 1
 
-        if i == thread_count and next_page_token:
-            threads, next_page_token = _get_emails(service, query, next_page_token)
-            collected_threads.extend(threads)
+        if i == message_count and next_page_token:
+            messages, next_page_token = _get_emails(service, query, next_page_token)
+            collected_messages.extend(messages)
 
     else:
         logging.info('Reached end of search results')
 
 
-def load_email_content(service: discovery.Resource, id: str) -> str:
+def get_email_content(service: discovery.Resource, id: str) -> str:
     """Fetches the email content for the provided ID.
 
     Args:
@@ -190,8 +200,21 @@ def load_email_content(service: discovery.Resource, id: str) -> str:
 
     Returns:
         The body of the email as a string
+
+    Raises:
+        BadMessageIdError: The provided ID is invalid
     """
-    service.users().threads().get(userId='me', id=id)
+
+    logging.info('Fetching content of email: %s', id)
+    message = service.users().messages().get(userId='me', id=id, format='raw').execute()
+
+    if not message:
+        raise BadMessageIdError('Cannot find an email with the provided id', id)
+
+    body = message.get('raw', [])
+
+    return body
+
 
 def main(argv: Sequence[str]) -> None:
     del argv
@@ -202,16 +225,8 @@ def main(argv: Sequence[str]) -> None:
         # get_labels(service)
         emails = get_emails(service, 'subject:(Daily Coding Problem)')
         for id in emails:
-            load_email_content(id: str) -> str(id):
-            """Fetches the email content for the provided ID.
-
-            Args:
-                id: The unique identifier of the email
-
-            Returns:
-                The body of the email as a string
-            """
-
+            print(get_email_content(service, id))
+            break
 
     except:
         logging.exception('Uncaught exception occurred')
