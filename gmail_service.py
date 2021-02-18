@@ -20,6 +20,8 @@ from absl import logging
 
 from googleapiclient import discovery
 
+import socket
+
 class Error(Exception):
     """Generic error class for this module.
     """
@@ -28,6 +30,10 @@ class BadMessageIdError(Error):
     """Invalid Message Id used to fetch email
     """
 
+
+class ReadTimeoutError(Error):
+    """Timeout error when reading the file
+    """
 
 class GmailService():
     """Fetches the resource object after authenticating with
@@ -88,16 +94,22 @@ class GmailService():
 
         Returns:
             A tuple containing a list of message ids, and a pagination token
+
+        Raises:
+            ReadTimeoutError: Error when there is a API timeout
         """
 
         logging.info('Searching emails for query: "%s"', query)
         logging.info('Using pagination: %s', next_page_token != None)
 
-        results = self._gmail_service.users().messages().list( # pylint: disable=no-member
-            userId='me', 
-            q=query, 
-            pageToken = next_page_token, 
-            maxResults = max_results).execute()
+        try:
+            results = self._gmail_service.users().messages().list( # pylint: disable=no-member
+                userId='me', 
+                q=query, 
+                pageToken = next_page_token, 
+                maxResults = max_results).execute()
+        except socket.timeout:
+            raise ReadTimeoutError('Socket timeout while searching emails')
 
         messages = results.get('messages', [])
         next_page_token = results.get('nextPageToken', None)
@@ -127,14 +139,17 @@ class GmailService():
 
         Raises:
             BadMessageIdError: If a message cannot be retrieved using the provided id
+            ReadTimeoutError: Error when there is a API timeout
         """
 
         logging.info('Fetching content of email: %s', message_id)
 
         try:
             message = self._gmail_service.users().messages().get(userId='me', id=message_id).execute() #pylint: disable=no-member
+        except socket.timeout:
+            raise ReadTimeoutError('Socket timeout while fetching message')
         except:
-            logging.exception('Uncaught exception while fetching email')
+            logging.error('Uncaught exception while fetching email')
             raise
 
         if not message:
