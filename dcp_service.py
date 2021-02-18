@@ -90,7 +90,6 @@ class DCP_Service():
             TooManyHtmlParts: If the message has more than one html content
         """
 
-        logging.info('Fetching content of message : %s', message_id)
         message = self._gmail_service.get_messsage_content(message_id)
         parts = message.get('parts', [])
 
@@ -123,7 +122,6 @@ class DCP_Service():
             if header.get('name') == 'Content-Type' \
                 and header.get('value') == 'text/html':
 
-                logging.info('HTML content found')
                 return True
 
         return False
