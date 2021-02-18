@@ -49,7 +49,7 @@ def main(argv: Sequence[str]) -> None:
     else:
         logging.warning('No run data file found')
 
-    last_run_timestamp = run_data.get('last_run_at', 0)
+    last_run_timestamp = run_data.get('last_email_run_at', 0)
     
     dcp_svc = dcp_service.DCP_Service(gmail_svc)
     email_ids, next_page_token = dcp_svc.get_dcp_messages(
@@ -69,18 +69,17 @@ def main(argv: Sequence[str]) -> None:
         if new_email_ids:
             email_ids.extend(new_email_ids)
 
+    email_ids = set(email_ids)
     logging.info('Fetched %d emails', len(email_ids))
 
     # save data to file
-    run_data['last_run_at'] = math.floor(current_timestamp)
+    run_data['last_email_run_at'] = math.floor(current_timestamp)
 
-    saved_email_ids = run_data.get('email_ids', [])
-    email_ids.extend(saved_email_ids)
-    email_ids = list(set(email_ids))
-    run_data['email_ids'] = email_ids    
+    prev_email_ids = run_data.get('email_ids', [])
+    email_ids.update(prev_email_ids)
+    run_data['email_ids'] = list(email_ids)
 
     try:
-        
         logging.info('Writing to file: %s', _DATA_FILE.value)
         with open(_DATA_FILE.value, 'wb') as file:
             pickle.dump(run_data, file)
