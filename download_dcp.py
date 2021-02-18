@@ -23,7 +23,15 @@ from absl import app
 from absl import flags
 from absl import logging
 
-SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+import credential_service
+import gmail_service
+import dcp_service
+import html_service
+
+_SCOPES = flags.DEFINE_list(
+    'scopes',
+    ['https://www.googleapis.com/auth/gmail.readonly'],
+    'The scopes to be requested while fetching the token')
 _TOKEN_FILE = flags.DEFINE_string(
     'token_file',
     'config/token.pickle', 
@@ -32,6 +40,10 @@ _CRED_FILE = flags.DEFINE_string(
     'credential_file',
     'config/credentials.json',
     'The path to the credential file')
+_LINK_FILE = flags.DEFINE_string(
+    'link_file',
+    'data/links.txt',
+    'The file where the links will be stored')
 
 
 class Error(Exception):
@@ -77,7 +89,7 @@ def get_credentials() -> credentials.Credentials:
         else:
             logging.info('Starting new OAuth flow')
             app_flow = flow.InstalledAppFlow.from_client_secrets_file(
-                _CRED_FILE.value, SCOPES)
+                _CRED_FILE.value, _SCOPES)
             creds = app_flow.run_local_server(port=0)
 
             # save this for later use
@@ -153,7 +165,7 @@ def _get_emails(service: discovery.Resource, query: str, page_token=None) -> Tup
     logging.info('Searching emails for query: "%s"', query)
     logging.info('Using pagination: %s', page_token != None)
 
-    results = service.users().messages().list(userId='me', q=query, pageToken = page_token).execute()
+    results = service.users().messages().list(userId='me', q=query, pageToken = page_token, maxResults = 10).execute()
     if not page_token:
         logging.info('Retrieved (approx) %d messages', results['resultSizeEstimate'])
 
@@ -196,6 +208,7 @@ def get_emails(service: discovery.Resource, query: str) -> Generator[str, None, 
         if i == message_count and next_page_token:
             messages, next_page_token = _get_emails(service, query, next_page_token)
             collected_messages.extend(messages)
+            message_count += len(messages)
 
     else:
         logging.info('Reached end of search results')
@@ -303,6 +316,62 @@ def get_links_from_html(html: Sequence[str]) -> str:
 def main(argv: Sequence[str]) -> None:
     del argv
 
+    # start by getting the credential
+    # initialize an oauth flow in case the token is not present
+    # or is invalid
+    try:
+        cred = credential_service.Credential(
+            cred_file=_CRED_FILE,
+            token_file=_TOKEN_FILE,
+            scopes=_SCOPES)
+        token = cred.get_token()
+    except:
+        logging.exception('Exiting! Unable to load Credentials')
+        exit()
+
+    # get the gmail service instance
+    try:
+        gmail_svc = gmail_service.GmailService(token)
+        gmail_svc.load_gmail_resource()
+    except:
+        logging.exception('Exiting! Unable to load the GMail service')
+        exit()
+
+    try:
+        dcp_svc = dcp_service.DCP_Service(gmail_svc)
+        email_ids, next_page_token = dcp_svc.get_dcp_messages(next_page_token=None)
+
+        email_index = 0
+        email_count = len(email_ids)
+
+        # until there is no next page, keep going through the list 
+        while email_count and next_page_token:
+            try:
+                message = dcp_svc.get_html_message(email_ids[email_index])
+            except dcp_service.InvalidMessageError:
+                logging.warning('Skipping message %s; no message found', email_ids[email_index])
+            except dcp_service.TooManyHtmlParts:
+                logging.warning('Skipping message %s; unsupported message format', email_ids[email_index])
+            finally:
+                email_index += 1
+
+            if message:
+                links = dcp_svc.get_solution_links(message)
+                for link in links:
+                    print(link)
+
+                # fetch the next page of results if needed
+                if email_index >= email_count and next_page_token:
+                    new_email_ids, next_page_token = dcp_svc.get_dcp_messages(
+                        next_page_token=next_page_token)
+
+                    email_ids.extend(new_email_ids)
+
+
+    except:
+        logging.exception('Uncaught Error!')
+        exit()
+
     try:
         creds = get_credentials()
         service = get_gmail_service(creds)
@@ -312,30 +381,13 @@ def main(argv: Sequence[str]) -> None:
         html_data = map(get_html_from_payload, payload)
         html_data = filter(lambda h: h != None, html_data)
         links = map(get_links_from_html, html_data)
-
+        
         # flatten the list of links
-        # links = functools.reduce(operator.iconcat, links, [])
-        count = 0
-        for l in links:
-            for e in l:
-                print(e)
+        list_links = functools.reduce(operator.iconcat, links, [])
 
-            count += 1
-            if count == 5:
-                break
-
-        # 
-
-        # for l in links:
-        #     print(l)
-        #     break
-
-        # for id in emails:
-        #     payload = get_email_content(service, id)
-        #     html = get_html_from_payload(payload)
-        #     get_links_from_html(html)
-            
-        #     break
+        with open(_LINK_FILE, 'w') as file:
+            for link in list_links:
+                file.write(link)
 
     except:
         logging.exception('Uncaught exception occurred')

@@ -140,3 +140,5 @@ cython_debug/
 # Project specific files and folders
 config/
 .vscode/
+data/*.pickle
+
