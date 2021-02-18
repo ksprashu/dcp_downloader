@@ -21,14 +21,10 @@ import pickle
 import datetime
 
 
-_EMAIL_FILE = flags.DEFINE_string(
-    'email_file',
-    'data/emails.pickle',
-    'The file where the message ids are stored')    
-_LAST_RUN_FILE = flags.DEFINE_string(
-    'last_run_file',
-    'data/last_run.pickle', 
-    'The path where the last run data is saved')
+_DATA_FILE = flags.DEFINE_string(
+    'data_file',
+    'data/run_data.pickle', 
+    'The path where the run data is saved')
     
 
 def main(argv: Sequence[str]) -> None:
@@ -41,20 +37,19 @@ def main(argv: Sequence[str]) -> None:
     assert gmail_svc
 
     # check if there were previously retrieved emails
-    last_run_state = {}
-    logging.info('Looking for last run file')
-    if os.path.exists(_LAST_RUN_FILE.value):
+    run_data = {}
+    logging.info('Loading data file')
+    if os.path.exists(_DATA_FILE.value):
         try:
-            with open(_LAST_RUN_FILE.value, 'rb') as file:
-                last_run_state = pickle.load(file)
-            logging.info('State file loaded!')
+            with open(_DATA_FILE.value, 'rb') as file:
+                run_data = pickle.load(file)
         except OSError: 
-            logging.exception('Exiting! State file is bad!')
+            logging.exception('Exiting! Unable to load data file.')
             exit()
     else:
-        logging.warning('No last run state file present; fetching all emails')
+        logging.warning('No run data file found')
 
-    last_run_timestamp = last_run_state.get('timestamp', 0)
+    last_run_timestamp = run_data.get('last_run_at', 0)
     
     dcp_svc = dcp_service.DCP_Service(gmail_svc)
     email_ids, next_page_token = dcp_svc.get_dcp_messages(
@@ -76,22 +71,21 @@ def main(argv: Sequence[str]) -> None:
 
     logging.info('Fetched %d emails', len(email_ids))
 
-    # save email ids to file
+    # save data to file
+    run_data['last_run_at'] = math.floor(current_timestamp)
+
+    saved_email_ids = run_data.get('email_ids', [])
+    email_ids.extend(saved_email_ids)
+    run_data['email_ids'] = email_ids
+
     try:
-        logging.info('Writing to file: %s', _EMAIL_FILE.value)
-        with open(_EMAIL_FILE.value, 'wb') as file:
-            pickle.dump(email_ids, file)
+        
+        logging.info('Writing to file: %s', _DATA_FILE.value)
+        with open(_DATA_FILE.value, 'wb') as file:
+            pickle.dump(run_data, file)
     except OSError:
         logging.exception('Error while writing to file')
         exit()
-
-    # save last run state
-    try:
-        last_run_state['timestamp'] = math.floor(current_timestamp)
-        with open(_LAST_RUN_FILE.value, 'wb') as file:
-            pickle.dump(last_run_state, file)
-    except OSError:
-        logging.warn('Error while saving run state')
 
 
         # # until there is no next page, keep going through the list 
