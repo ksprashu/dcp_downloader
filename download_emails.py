@@ -12,9 +12,8 @@ from absl import app
 from absl import flags
 from absl import logging
 
-import credential_service
 import dcp_service
-import gmail_service
+import download_helper
 
 import math
 import os
@@ -22,27 +21,10 @@ import pickle
 import datetime
 
 
-_SCOPES = flags.DEFINE_list(
-    'scopes',
-    ['https://www.googleapis.com/auth/gmail.readonly'],
-    'The scopes to be requested while fetching the token')
-_TOKEN_FILE = flags.DEFINE_string(
-    'token_file',
-    'config/token.pickle', 
-    'The path where the token file is saved')
-_CRED_FILE = flags.DEFINE_string(
-    'credential_file',
-    'config/credentials.json',
-    'The path to the credential file')
-_LINK_FILE = flags.DEFINE_string(
-    'link_file',
-    'data/links.txt',
-    'The file where the links will be stored')
 _EMAIL_FILE = flags.DEFINE_string(
     'email_file',
     'data/emails.pickle',
-    'The file where the message ids are stored'
-)    
+    'The file where the message ids are stored')    
 _LAST_RUN_FILE = flags.DEFINE_string(
     'last_run_file',
     'data/last_run.pickle', 
@@ -55,26 +37,8 @@ def main(argv: Sequence[str]) -> None:
     logging.info('Running program...')
     current_timestamp = datetime.datetime.now().timestamp()
 
-    # start by getting the credential
-    # initialize an oauth flow in case the token is not present
-    # or is invalid
-    try:
-        cred = credential_service.Credential(
-            cred_file=_CRED_FILE.value,
-            token_file=_TOKEN_FILE.value,
-            scopes=_SCOPES.value)
-        token = cred.get_token()
-    except:
-        logging.exception('Exiting! Unable to load Credentials')
-        exit()
-
-    # get the gmail service instance
-    try:
-        gmail_svc = gmail_service.GmailService(token)
-        gmail_svc.load_gmail_resource()
-    except:
-        logging.exception('Exiting! Unable to load the GMail service')
-        exit()
+    gmail_svc = download_helper.init_and_get_gmail_service()
+    assert gmail_svc
 
     # check if there were previously retrieved emails
     last_run_state = {}
@@ -83,6 +47,7 @@ def main(argv: Sequence[str]) -> None:
         try:
             with open(_LAST_RUN_FILE.value, 'rb') as file:
                 last_run_state = pickle.load(file)
+            logging.info('State file loaded!')
         except OSError: 
             logging.exception('Exiting! State file is bad!')
             exit()
@@ -131,12 +96,7 @@ def main(argv: Sequence[str]) -> None:
 
         # # until there is no next page, keep going through the list 
         # while email_count and next_page_token:
-        #     try:
-        #         message = dcp_svc.get_html_message(email_ids[email_index])
-        #     except dcp_service.InvalidMessageError:
-        #         logging.warning('Skipping message %s; no message found', email_ids[email_index])
-        #     except dcp_service.TooManyHtmlParts:
-        #         logging.warning('Skipping message %s; unsupported message format', email_ids[email_index])
+
         #     finally:
         #         email_index += 1
 
