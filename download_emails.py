@@ -76,7 +76,8 @@ def main(argv: Sequence[str]) -> None:
 
     saved_email_ids = run_data.get('email_ids', [])
     email_ids.extend(saved_email_ids)
-    run_data['email_ids'] = email_ids
+    email_ids = list(set(email_ids))
+    run_data['email_ids'] = email_ids    
 
     try:
         
