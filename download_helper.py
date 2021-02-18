@@ -9,13 +9,8 @@ from absl import flags
 from absl import logging
 
 import credential_service
-import dcp_service
 import gmail_service
 
-import math
-import os
-import pickle
-import datetime
 
 _SCOPES = flags.DEFINE_list(
     'scopes',
