@@ -90,18 +90,15 @@ class DCP_Service():
             TooManyHtmlParts: If the message has more than one html content
         """
 
+        MIME_TYPE = 'text/html'
         message = self._gmail_service.get_message_content(message_id)
         parts = message.get('parts', [])
+        html_parts = filter(lambda p: p.get('mimeType', None) == MIME_TYPE, parts)
 
-        # filter out only those parts which have a html content type
         data_parts = []
-        for part in parts:
-            if self._is_html_part(part):
-                body = part.get('body')
-                data = body.get('data')
-                text_data = base64.urlsafe_b64decode(data)
-
-                data_parts.append(text_data)
+        for part in html_parts:
+            text_data = base64.urlsafe_b64decode(part.get('body').get('data'))
+            data_parts.append(text_data)
 
         if len(data_parts) > 1:
             raise TooManyHtmlParts
@@ -110,21 +107,6 @@ class DCP_Service():
             return data_parts[0]
         else:
             return None
-
-
-    def _is_html_part(self, part: object) -> bool:
-        """Returns true if the part has a text/html header
-        """
-
-        html_headers = part.get('headers', [])
-        logging.debug('HTML headers: %s', html_headers)
-        for header in html_headers:
-            if header.get('name') == 'Content-Type' \
-                and header.get('value') == 'text/html':
-
-                return True
-
-        return False
 
 
     def get_solution_links_from_html(self, message: str) -> Sequence[str]:
@@ -137,7 +119,6 @@ class DCP_Service():
             A list of link urls
         """
 
-        logging.info('Extracting the links from the html')
         soup = bs4.BeautifulSoup(message, 'html.parser')
         link_tags = soup.find_all('a')
         
@@ -147,6 +128,6 @@ class DCP_Service():
             if re.search(self._SOLUTION_LINK_PATTERN, href):
                 links.append(href)
 
-        logging.info('Got %d matching links', len(links))
+        logging.info('Got %d solution link(s)', len(links))
         return links
 
