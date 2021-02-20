@@ -159,5 +159,19 @@ class GmailService():
         return payload
 
 
+    def get_message_subject(self, message: object) -> str:
+        """Returns the Subject Header from the message.
+
+        Args:
+            message: The gmail message content
+        """
+
+        logging.info('Getting subject from message')
+        headers = message.get('headers', [])
+        subject_headers = filter(lambda h: h.get('name', None) == 'Subject', headers)
+        subjects = [sub.get('value', None) for sub in subject_headers]
+        logging.info('Subject: %s', subjects[0])
+        return subjects[0]
+        
 
 
