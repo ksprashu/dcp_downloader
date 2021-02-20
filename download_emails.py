@@ -9,15 +9,12 @@ When run again, it should be able to retrieve only the newer files
 from typing import Sequence
 
 from absl import app
-from absl import flags
 from absl import logging
 
 import dcp_service
 import download_helper
 
 import math
-import os
-import pickle
 import datetime
 
 
