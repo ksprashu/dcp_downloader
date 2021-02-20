@@ -9,9 +9,9 @@ from typing import Tuple
 from absl import logging
 
 from googleapiclient import discovery
-from bs4 import BeautifulSoup
 
 import base64
+import bs4
 import re
 
 import gmail_service
@@ -138,7 +138,7 @@ class DCP_Service():
         """
 
         logging.info('Extracting the links from the html')
-        soup = BeautifulSoup(message, 'html.parser')
+        soup = bs4.BeautifulSoup(message, 'html.parser')
         link_tags = soup.find_all('a')
         
         links = []
@@ -147,5 +147,6 @@ class DCP_Service():
             if re.search(self._SOLUTION_LINK_PATTERN, href):
                 links.append(href)
 
+        logging.info('Got %d matching links', len(links))
         return links
 

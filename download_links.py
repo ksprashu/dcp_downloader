@@ -15,13 +15,8 @@ import download_helper
 import gmail_service
 
 
-_DATA_FILE = flags.DEFINE_string(
-    'data_file',
-    'data/run_data.pickle', 
-    'The path where the run data is saved')
-    
 # Number of records to process in every run
-_BATCH_SIZE = 50
+_BATCH_SIZE = 100
 
 
 def main(argv: Sequence[str]) -> None:
@@ -32,22 +27,10 @@ def main(argv: Sequence[str]) -> None:
     gmail_svc = download_helper.init_and_get_gmail_service()
     assert gmail_svc
 
-    # Loading the data file
-    logging.info('Loading data file')
-    run_data = {}
-    if os.path.exists(_DATA_FILE.value):
-        try:
-            with open(_DATA_FILE.value, 'rb') as file:
-                run_data = pickle.load(file)
-        except OSError:
-            logging.exception('Exiting! Unable to load data file.')
-            exit()
-    else:
-        logging.error('No run data file found; Download emails first!')
-
-
+    run_data = download_helper.get_run_data()
     email_ids = run_data.get('email_ids', [])
     email_count = len(email_ids)
+
     logging.info('Processing %d / %d emails',
         _BATCH_SIZE if _BATCH_SIZE < email_count else email_count,
         len(email_ids))
@@ -91,13 +74,7 @@ def main(argv: Sequence[str]) -> None:
         run_data['links'] = list(links)
         run_data['email_ids'] = skipped_email_ids
 
-        try:
-            logging.info('Writing to data file: %s', _DATA_FILE.value)
-            with open(_DATA_FILE.value, 'wb') as file:
-                pickle.dump(run_data, file)
-        except OSError:
-            logging.exception('Error while writing to data file!')
-            exit()
+        download_helper.save_run_data(run_data)
 
     logging.info('Completed!')
 

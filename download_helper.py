@@ -11,6 +11,9 @@ from absl import logging
 import credential_service
 import gmail_service
 
+import os
+import pickle
+
 
 _SCOPES = flags.DEFINE_list(
     'scopes',
@@ -24,6 +27,11 @@ _CRED_FILE = flags.DEFINE_string(
     'credential_file',
     'config/credentials.json',
     'The path to the credential file')
+_DATA_FILE = flags.DEFINE_string(
+    'data_file',
+    'data/run_data.pickle', 
+    'The path where the run data is saved')
+
 
 def init_and_get_gmail_service() -> gmail_service.GmailService:
     """Returns an authenticated gmail service object.
@@ -51,3 +59,39 @@ def init_and_get_gmail_service() -> gmail_service.GmailService:
         exit()
 
     return gmail_svc
+
+
+def get_run_data() -> object:
+    """Loads the data file and returns the last run data.
+    """
+
+    # Loading the data file
+    logging.info('Loading data file')
+    run_data = {}
+    if os.path.exists(_DATA_FILE.value):
+        try:
+            with open(_DATA_FILE.value, 'rb') as file:
+                run_data = pickle.load(file)
+        except OSError:
+            logging.exception('Exiting! Unable to load data file.')
+            exit()
+    else:
+        logging.error('No run data file found; Download emails first!')
+
+    return run_data
+
+
+def save_run_data(run_data: object) -> None:
+    """Saves the run state data into a file.
+
+    Args:
+        run_date: the state of the runtime data
+    """    
+
+    try:
+        logging.info('Writing to data file: %s', _DATA_FILE.value)
+        with open(_DATA_FILE.value, 'wb') as file:
+            pickle.dump(run_data, file)
+    except OSError:
+        logging.exception('Error while writing to data file!')
+        exit()    

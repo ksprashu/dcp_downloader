@@ -1,9 +1,12 @@
-"""This module help retrieve and parse HTML content 
+"""This module help retrieve and parse HTML content.
 
+Since the solution page uses dynamic async javascript,
+we will have to use a headless browser to render the page
+and then parse it.
 """
 
 class Html_Service():
-    """Helps fetch and parse HTML data
+    """Helps fetch and parse dynamic HTML data
     """
 
     def __init__(self):
