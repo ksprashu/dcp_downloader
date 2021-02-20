@@ -35,6 +35,14 @@ def main(argv: Sequence[str]) -> None:
         if not i in sorted_questions:
             print(f'probem {i} not found')
 
+    logging.info('Finding duplicates')
+    last_q = 0
+    for q in sorted_questions:
+        if q == last_q:
+            print('Duplicate Question - %d' % q)
+        
+        last_q  = q
 
+        
 if __name__ == "__main__":
     app.run(main)
