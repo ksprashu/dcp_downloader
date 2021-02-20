@@ -73,7 +73,7 @@ class GmailService():
 
 
 
-    def search_messsages(
+    def search_messages(
         self, 
         query: str, 
         next_page_token: str = None, 
@@ -125,7 +125,7 @@ class GmailService():
         return (message_ids, next_page_token)        
 
 
-    def get_messsage_content(self, message_id: str) -> object:
+    def get_message_content(self, message_id: str) -> object:
         """Returns the content object give a message id.
 
         This returns the entire content of the message including

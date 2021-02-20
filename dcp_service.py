@@ -67,7 +67,7 @@ class DCP_Service():
         if timestamp:
             query += f' after: {timestamp}'
 
-        messages, next_page_token = self._gmail_service.search_messsages(
+        messages, next_page_token = self._gmail_service.search_messages(
             query, 
             next_page_token, 
             DCP_Service._MAX_RESULTS)
@@ -90,7 +90,7 @@ class DCP_Service():
             TooManyHtmlParts: If the message has more than one html content
         """
 
-        message = self._gmail_service.get_messsage_content(message_id)
+        message = self._gmail_service.get_message_content(message_id)
         parts = message.get('parts', [])
 
         # filter out only those parts which have a html content type
