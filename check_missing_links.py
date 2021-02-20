@@ -31,10 +31,10 @@ def main(argv: Sequence[str]) -> None:
     print(f'Total questions should be {max_q - min_q + 1}, and we have {len(sorted_questions)}')
 
     logging.info('Finding missing questions')
-    for i in range(min_q, max_q):
+    for i in range(min_q, max_q+1):
         if not i in sorted_questions:
             print(f'probem {i} not found')
-    
+
 
 if __name__ == "__main__":
     app.run(main)
