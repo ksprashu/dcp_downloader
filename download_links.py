@@ -59,7 +59,7 @@ def main(argv: Sequence[str]) -> None:
             skipped_email_ids.append(email_id)
 
         if message:
-            new_links = dcp_svc.get_solution_links(message)
+            new_links = dcp_svc.get_solution_links_from_html(message)
             links.extend(new_links)
 
     links = set(links)

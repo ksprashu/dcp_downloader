@@ -356,7 +356,7 @@ def main(argv: Sequence[str]) -> None:
                 email_index += 1
 
             if message:
-                links = dcp_svc.get_solution_links(message)
+                links = dcp_svc.get_solution_links_from_html(message)
                 for link in links:
                     print(link)
 

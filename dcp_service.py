@@ -127,7 +127,7 @@ class DCP_Service():
         return False
 
 
-    def get_solution_links(self, message: str) -> Sequence[str]:
+    def get_solution_links_from_html(self, message: str) -> Sequence[str]:
         """Returns a list of solution links from the HTML content.
 
         Args:
