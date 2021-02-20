@@ -25,8 +25,14 @@ class InvalidMessageError(Error):
     """
 
 class TooManyHtmlParts(Error):
-    """The message has more than 1 html part    
+    """The message has more than 1 html parts
     """
+
+
+class TooManyTextParts(Error):
+    """The message has more than 1 text parts
+    """
+
 
 class DCP_Service():
     """Helper for fetching the right emails relevant for DCP.
@@ -109,6 +115,40 @@ class DCP_Service():
             return None
 
 
+    def get_text_message(self, message_id: str) -> str:
+        """Parse the content of the message and return 
+        only the text content that we are interested in.
+
+        Args:
+            message_id: Unique identifier of the message
+
+        Returns:
+            A single html message if present
+
+        Raises:
+            InvalidMessageError: If the message id is not found
+            TooManyTextParts: If the message has more than one html content
+        """
+
+        MIME_TYPE = 'text/plain'
+        message = self._gmail_service.get_message_content(message_id)
+        parts = message.get('parts', [])
+        text_parts = filter(lambda p: p.get('mimeType', None) == MIME_TYPE, parts)
+
+        data_parts = []
+        for part in text_parts:
+            text_data = base64.urlsafe_b64decode(part.get('body').get('data'))
+            data_parts.append(str(text_data))
+
+        if len(data_parts) > 1:
+            raise TooManyTextParts
+
+        if data_parts:
+            return data_parts[0]
+        else:
+            return None
+
+
     def get_solution_links_from_html(self, message: str) -> Sequence[str]:
         """Returns a list of solution links from the HTML content.
 
@@ -119,6 +159,7 @@ class DCP_Service():
             A list of link urls
         """
 
+        logging.info('Parsing HTML to get links')
         soup = bs4.BeautifulSoup(message, 'html.parser')
         link_tags = soup.find_all('a')
         
@@ -128,6 +169,24 @@ class DCP_Service():
             if re.search(self._SOLUTION_LINK_PATTERN, href):
                 links.append(href)
 
-        logging.info('Got %d solution link(s)', len(links))
+        logging.info('Found %d solution link(s)', len(links))
+        return links
+
+
+    def get_solution_links_from_text(self, message: str) -> Sequence[str]:
+        """Returns a list of solution links from the text content.
+
+        Args:
+            message: The text content as a string
+        
+        Returns:
+            A list of link urls
+        """
+
+        logging.info('Getting text links')
+        all_links = re.findall(r'\[.+?\]', message)
+        solution_links = filter(lambda l: re.search('dailycodingproblem', l) is not None, all_links)
+        links = [re.sub(r'[\[\]]', '',link) for link in set(solution_links)]
+        logging.info('Found %d solution links', len(links))
         return links
 
