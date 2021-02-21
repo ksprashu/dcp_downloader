@@ -8,12 +8,20 @@ and then parse it.
 from absl import logging
 
 import collections
+import ratelimiter
 import re
+import requests
+
+
 from urllib import parse
-from urllib import request
 
 class LinkWithoutTokenError(Exception):
     """Provided solution link doesn't contain a token.
+    """
+
+
+class InvalidJsonApiError(Exception):
+    """API didn't return a valid JSON response
     """
 
 
@@ -21,7 +29,8 @@ class Html_Service():
     """Helps fetch and parse dynamic HTML data
     """
 
-    API_BASE_PATH = 'www.dailycodingproblem.com/api/solution'
+    API_PATH = 'api/solution'
+    API_HOST = 'www.dailycodingproblem.com'
 
     def __init__(self):
         pass
@@ -51,9 +60,37 @@ class Html_Service():
         if not re.search('token', query):
             raise LinkWithoutTokenError('There was no token in the link %s', href)
 
-        api_url = parse.ParseResult(scheme='https',netloc=None, path=Html_Service.API_BASE_PATH, params=None, query=query, fragment=None)
+        api_url = parse.ParseResult(
+            scheme='https', 
+            netloc=Html_Service.API_HOST, 
+            path=Html_Service.API_PATH, 
+            params=None, 
+            query=query, 
+            fragment=None)
+
         return api_url.geturl()
         
+    @ratelimiter.RateLimiter(max_calls=1, period=1)
+    def get_api_content_as_md(self, href: str) -> str:
+        """Calls the API link and returns the response as Markdown.
 
+        Args:
+            href: The link to the API
+        
+        Returns:
+            The response as a markdown document
+        """
 
+        logging.info('Getting content from url %s', href)
+        r = requests.get(href)
 
+        try:
+            res = r.json()
+        except ValueError:
+            logging.error('Unable to get solution json from link %s', href)
+            raise InvalidJsonApiError('API didn\'t return a JSON')
+
+        if res:
+            doc = f"## Problem #{res['problemId']}\n{res['problem']}\n## Solution\n{res['solution']}"
+
+        return doc
