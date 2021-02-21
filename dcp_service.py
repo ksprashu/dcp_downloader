@@ -5,6 +5,8 @@ This will fetch the Daily Coding Problem emails and get the relevant HTML conten
 
 from typing import Sequence
 from typing import Tuple 
+from typing import Dict
+from typing import Set
 
 from absl import logging
 
@@ -201,4 +203,91 @@ class DCP_Service():
         logging.debug(links)
         logging.info('Found %d solution links', len(links))
         return links
+
+
+    def collect_problem_difficulty(self, emails: Dict[str, str], problems: Dict[int, str]) \
+        -> Dict[int, str]:
+        """Returns the difficulty for each problem from the emails.
+
+        The subject of each email contains the problem number
+        and difficulty of the problem. This is parsed and returned.
+
+        Args:
+            emails: The email dictionary with email id and subject
+            problems: The problem dictionary with problem id and difficulty 
+            
+        Return:
+            A dictionary of problem ids and difficulties
+        """
+
+        logging.info('Fetching problem difficulty from subjects')
+
+        for email_id in emails:
+            if not emails[email_id]:
+                continue
+
+            diff_match = re.search(r'\[.+\]', emails[email_id])
+            prob_match = re.search(r'#\d+', emails[email_id])
+
+            if not prob_match:
+                continue
+            else:
+                problem_id = int(re.sub('#', '', prob_match.group()))
+            
+            if diff_match:
+                difficulty = re.sub(r'[\[\]]', '', diff_match.group())
+            else:
+                difficulty = 'Easy'
+
+            if problem_id not in problems:
+                logging.info('Adding problem id %d with difficulty %s',
+                    problem_id, difficulty)
+                problems[problem_id] = difficulty
+
+        return problems
+
+
+    def get_subject_and_links(self, emails: Dict[str, str], batch_size: int) \
+        -> Tuple[Dict[str, str], Set[str]]:
+        """Fetches content of all emails.
+
+        Args:
+            emails: dictionary of email ids and fetch status
+            batch_size: number of emails to process
+
+        Returns:
+            Tuple of emails with subjects and solution links from the email content
+        """
+
+        logging.info('Fetching and Processing emails')
+
+        links = []
+        new_emails = {}
+
+        for ix, email_id in enumerate(emails.keys()):
+            if ix >= batch_size:
+                break
+
+            try:
+                subject, message = self.get_text_message(email_id)
+                ix = ix + 1
+
+                new_emails[email_id] = subject
+                
+                if message:
+                    new_links = self.get_solution_links_from_text(message)
+                    links.extend(new_links)
+
+            except InvalidMessageError:
+                logging.error('Skipping message %s; identifier not found', email_id)
+            except TooManyTextParts:
+                logging.error('Skipping message %s; unsupported message format', email_id)
+            except gmail_service.ReadTimeoutError:
+                logging.warning('Timeout error, will process the message %s again', email_id)
+
+        links = set(links)
+        logging.info('Processed %d emails', len(new_emails))
+        logging.info('Fetched %d links', len(links))
+
+        return new_emails, links
 
