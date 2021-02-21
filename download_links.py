@@ -27,7 +27,6 @@ def main(argv: Sequence[str]) -> None:
     emails = run_data.get('emails', [])
     problems = run_data.get('problems', {})
 
-
     assert emails, "Please download emails before proceeding!"
 
     new_emails = {email_id:None for email_id,sub in emails.items() if not sub}
