@@ -49,9 +49,9 @@ def main(argv: Sequence[str]) -> None:
     has_changes = False
     if links:
         has_changes = True
-        prev_links = run_data.get('links', [])
-        links.update(prev_links)
-        run_data['links'] = list(links)
+        prev_links = run_data.get('links', {})
+        links = collect_all_links(links, prev_links)
+        run_data['links'] = links
 
     if len(problems) != problem_count:
         has_changes = True        
@@ -84,6 +84,31 @@ def collect_all_emails(
         emails[email_id] = subject
 
     return emails
+
+
+def collect_all_links(
+    new_links: Sequence[str],
+    links: Dict[str,str]) -> Dict[str,str]:
+    """Collects the list of new links into a dict and returns.
+
+    Args:
+        new_links: A list of newly fetched links
+        links: A dictionary of saved links and file mapping
+    """
+
+    logging.info('Collection list of new links')
+
+    for link in new_links:
+        if link not in links:
+            links[link] = None
+
+    return links
+
+        
+    
+            
+        
+
 
 
 if __name__ == '__main__':
