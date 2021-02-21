@@ -15,7 +15,6 @@ def main(argv: Sequence[str]) -> None:
 
     logging.info('collecting all problems')
     problems = run_data.get('problems')
-    print(problems)
 
     sorted_problems = sorted(list(problems.keys()))
     min_p = sorted_problems[0]
