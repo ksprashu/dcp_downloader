@@ -48,7 +48,7 @@ def get_all_emails(last_run_at: int) -> Sequence[str]:
     return email_ids
 
 
-def collect_all_email_ids(
+def collect_all_emails(
     new_email_ids: Sequence[str], 
     old_emails: Dict[str, str]) -> Dict[str, str]:
     """Returns emails as a dictionary.
@@ -89,7 +89,7 @@ def main(argv: Sequence[str]) -> None:
 
     if email_ids:
         old_emails = run_data.get('emails', {})
-        all_emails = collect_all_email_ids(new_email_ids=email_ids, old_emails=old_emails)
+        all_emails = collect_all_emails(new_email_ids=email_ids, old_emails=old_emails)
         all_emails.update(old_emails)
         run_data['emails'] = all_emails
 
