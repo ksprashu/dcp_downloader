@@ -142,4 +142,6 @@ cython_debug/
 data/*.pickle
 config/*.json
 config/*.pickle
+config/
+solutions/*/problem*.md
 
