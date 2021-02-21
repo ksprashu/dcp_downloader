@@ -194,6 +194,7 @@ class DCP_Service():
         """
 
         logging.info('Getting links from text')
+        logging.debug(message)
         all_links = re.findall(r'\[.+?\]', message)
         solution_links = filter(lambda l: re.search('dailycodingproblem.com/solution', l) is not None, all_links)
         links = [re.sub(r'[\[\]]', '',link) for link in set(solution_links)]
