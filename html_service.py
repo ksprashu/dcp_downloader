@@ -32,16 +32,6 @@ class Html_Service():
     API_PATH = 'api/solution'
     API_HOST = 'www.dailycodingproblem.com'
 
-    def __init__(self):
-        pass
-
-    def fetch_page_from_link(self):
-        pass
-
-    def parse_html(self):
-        pass
-
-
     def get_api_link_from_href(self, href: str) -> str:
         """Parses the link to the solution HTML page and return the API link.
 
