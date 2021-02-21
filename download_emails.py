@@ -50,7 +50,7 @@ def get_all_emails(last_run_at: int) -> Sequence[str]:
 
 def collect_all_email_ids(
     new_email_ids: Sequence[str], 
-    old_emails: Dict[str, bool]) -> Dict[str, bool]:
+    old_emails: Dict[str, str]) -> Dict[str, str]:
     """Returns emails as a dictionary.
 
     Collects the list of old and new emails and returns
@@ -58,16 +58,16 @@ def collect_all_email_ids(
 
     Args:
         new_emails: A list of email ids
-        old_emails: A Dictionary of email ids with a boolean status
+        old_emails: A Dictionary of email ids with a subject
 
     Returns:
-        A dictionary of email ids with a boolean status
+        A dictionary of email ids with a str indicating subject
     """
     logging.info('Collecting new and old email ids into a single dictionary')
     
     old_ids = old_emails.keys()
-    new_email_ids = set(new_email_ids) - set(old_ids)
-    new_emails = {email_id: False for email_id in new_email_ids}
+    new_email_ids = set(new_email_ids) - set(old_ids) # only process new email ids
+    new_emails = {email_id: None for email_id in new_email_ids} # the subject is blank if unprocessed
     new_emails.update(old_emails)
     
     return new_emails
