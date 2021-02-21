@@ -83,7 +83,7 @@ class DCP_Service():
         return messages, next_page_token
 
     @ratelimiter.RateLimiter(max_calls=1, period=1)
-    def get_html_message(self, message_id: str) -> Tuple(str, str):
+    def get_html_message(self, message_id: str) -> Tuple[str, str]:
         """Parse the content of the message and return 
         only the HTML content that we are interested in.
 
@@ -121,7 +121,7 @@ class DCP_Service():
             return subject, None
 
     @ratelimiter.RateLimiter(max_calls=1, period=1)
-    def get_text_message(self, message_id: str) -> Tuple(str, str):
+    def get_text_message(self, message_id: str) -> Tuple[str, str]:
         """Parse the content of the message and return 
         only the text content that we are interested in.
 
@@ -193,10 +193,11 @@ class DCP_Service():
             A list of link urls
         """
 
-        logging.info('Getting text links')
+        logging.info('Getting links from text')
         all_links = re.findall(r'\[.+?\]', message)
-        solution_links = filter(lambda l: re.search('dailycodingproblem', l) is not None, all_links)
+        solution_links = filter(lambda l: re.search('dailycodingproblem.com/solution', l) is not None, all_links)
         links = [re.sub(r'[\[\]]', '',link) for link in set(solution_links)]
+        logging.debug(links)
         logging.info('Found %d solution links', len(links))
         return links
 
