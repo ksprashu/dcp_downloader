@@ -148,8 +148,8 @@ class Credential():
                 cred = self._refresh_token(cred)
             else:
                 cred = self._get_new_token()
-                self._save_token_to_file(cred) # save for later use
-    
+                
+            self._save_token_to_file(cred) # save for later use
             self._cred = cred
 
         return cred
