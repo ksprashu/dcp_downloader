@@ -7,7 +7,6 @@ and then parse it.
 
 from absl import logging
 
-import collections
 import ratelimiter
 import re
 import requests
@@ -60,6 +59,7 @@ class Html_Service():
 
         return api_url.geturl()
         
+
     @ratelimiter.RateLimiter(max_calls=1, period=1)
     def get_api_content_as_md(self, href: str) -> str:
         """Calls the API link and returns the response as Markdown.
@@ -69,6 +69,9 @@ class Html_Service():
         
         Returns:
             The response as a markdown document
+
+        Raises:
+            InvalidJsonApiError: The API didn't return a valid JSON
         """
 
         logging.info('Getting content from url %s', href)
@@ -84,3 +87,18 @@ class Html_Service():
             doc = f"## Problem #{res['problemId']}\n{res['problem']}\n## Solution\n{res['solution']}"
 
         return doc
+
+
+    def get_problem_number(self, href: str) -> int:
+        """Returns the problem number provided in the contained link.
+
+        Args:
+            href: Link to the problem solution
+        """
+
+        logging.info('Getting problem number from link %s', href)
+        result = parse.urlparse(href)
+        path = result.path
+        problem_id = path.split('/')[-1]
+
+        return int(problem_id)
