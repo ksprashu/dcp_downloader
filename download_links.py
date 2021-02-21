@@ -7,9 +7,6 @@ from absl import app
 from absl import flags
 from absl import logging
 
-import os
-import pickle
-
 import dcp_service
 import download_helper
 import gmail_service
@@ -37,29 +34,30 @@ def main(argv: Sequence[str]) -> None:
 
     dcp_svc = dcp_service.DCP_Service(gmail_svc)
 
-    # slice the list only if there are more emails than batch size
-    if email_count > _BATCH_SIZE:
-        skipped_email_ids = email_ids[_BATCH_SIZE:]
-        email_ids = email_ids[:_BATCH_SIZE]
-    else:
-        skipped_email_ids = []
+    # # slice the list only if there are more emails than batch size
+    # if email_count > _BATCH_SIZE:
+    #     skipped_email_ids = email_ids[_BATCH_SIZE:]
+    #     email_ids = email_ids[:_BATCH_SIZE]
+    # else:
+    #     skipped_email_ids = []
 
     # process all emails
     links = []
+    skipped_email_ids = []
     for email_id in email_ids:
         message = []
         try:
-            message = dcp_svc.get_html_message(email_id)
+            message = dcp_svc.get_text_message(email_id)
         except dcp_service.InvalidMessageError:
-            logging.warning('Skipping message %s; identifier not found', email_id)
-        except dcp_service.TooManyHtmlParts:
-            logging.warning('Skipping message %s; unsupported message format', email_id)     
+            logging.error('Skipping message %s; identifier not found', email_id)
+        except dcp_service.TooManyTextParts:
+            logging.error('Skipping message %s; unsupported message format', email_id)     
         except gmail_service.ReadTimeoutError:
-            logging.error('Timeout error, will process the message %s again', email_id)
+            logging.warning('Timeout error, will process the message %s again', email_id)
             skipped_email_ids.append(email_id)
 
         if message:
-            new_links = dcp_svc.get_solution_links_from_html(message)
+            new_links = dcp_svc.get_solution_links_from_text(message)
             links.extend(new_links)
 
     links = set(links)

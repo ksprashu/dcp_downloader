@@ -68,9 +68,8 @@ class GmailService():
 
                 self._gmail_service = res
             except:
-                logging.exception('Uncaught exception while getting gmail resource')
+                logging.error('Uncaught exception while getting gmail resource')
                 raise
-
 
 
     def search_messages(

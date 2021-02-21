@@ -70,7 +70,7 @@ class Credential():
                 with open(self._token_file, 'rb') as token:
                     cred = pickle.load(token)
             except OSError:
-                logging.exception('Unable to read the token file')
+                logging.error('Unable to read the token file')
                 raise BadFileError('The contents of the file cannot be read')
         else:
             logging.warning('Specified file does not exist')
@@ -101,7 +101,7 @@ class Credential():
                 self._cred_file, self._scopes)
             cred = app_flow.run_local_server(port=0) # will open up the consent page
         except:
-            logging.exception('Unknown exception while getting token from oauth')
+            logging.error('Unknown exception while getting token from oauth')
             raise
 
         return cred

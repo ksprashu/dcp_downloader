@@ -13,6 +13,7 @@ import gmail_service
 
 import os
 import pickle
+import sys
 
 
 _SCOPES = flags.DEFINE_list(
@@ -48,7 +49,7 @@ def init_and_get_gmail_service() -> gmail_service.GmailService:
         token = cred.get_token()
     except:
         logging.exception('Exiting! Unable to load Credentials')
-        exit()
+        sys.exit('Exiting Program!')
 
     # get the gmail service instance
     try:
@@ -56,7 +57,7 @@ def init_and_get_gmail_service() -> gmail_service.GmailService:
         gmail_svc.load_gmail_resource()
     except:
         logging.exception('Exiting! Unable to load the GMail service')
-        exit()
+        sys.exit('Exiting Program!')
 
     return gmail_svc
 
@@ -74,9 +75,9 @@ def get_run_data() -> object:
                 run_data = pickle.load(file)
         except OSError:
             logging.exception('Exiting! Unable to load data file.')
-            exit()
+            sys.exit('Exiting Program!')
     else:
-        logging.error('No run data file found; Download emails first!')
+        logging.warning('No run data file found!')
 
     return run_data
 
@@ -94,4 +95,4 @@ def save_run_data(run_data: object) -> None:
             pickle.dump(run_data, file)
     except OSError:
         logging.exception('Error while writing to data file!')
-        exit()    
+        sys.exit('Exiting Program!')    
