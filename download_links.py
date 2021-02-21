@@ -30,7 +30,6 @@ def main(argv: Sequence[str]) -> None:
     assert emails, "Please download emails before proceeding!"
 
     new_emails = {email_id:None for email_id,sub in emails.items() if not sub}
-    
     batch_size = email_count = len(new_emails)
     problem_count = len(problems)
 

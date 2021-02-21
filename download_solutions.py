@@ -34,8 +34,9 @@ def main(argv: Sequence[str]) -> None:
     links = run_data.get('links', {})
     problems = run_data.get('problems', {})
 
-    new_links = {link:None for link,val in links.items() if not val}
+    assert links, "Please download links from emails before proceeding!"
 
+    new_links = {link:None for link,val in links.items() if not val}
     batch_size = link_count = len(new_links)
 
     if _BATCH_SIZE.value:
