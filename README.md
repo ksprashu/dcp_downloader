@@ -20,10 +20,21 @@ The solution is built on Python3 and uses a GMail API key to read the emails.
 2. Enable the GMail API on GCP
 Follow the guide (here)[https://developers.google.com/gmail/api/quickstart/python]
 
-3. Create a `config` folder within this repo root
+3. Download the credentials json and save it into the `config` folder
 
-4. Download the credentials json and save it into the `config` folder
+5. Run the following programs
 
-5. Run the program
-`$ py3 download.py`
+Download the list of emails
+`$ python download_emails.py`
+
+Download the list of links from the emails
+`$ python download_links.py`
+
+Download the solution content from the links
+`$ python download_solutions.py`
+
+Commands in Step 5 can be run iteratively and independently to fetch new content.
+
+The `check*`, `add*` files can be used to look for data issues and rectify manually.
+
 
