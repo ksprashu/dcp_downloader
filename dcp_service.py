@@ -15,6 +15,8 @@ import bs4
 import re
 
 import gmail_service
+import ratelimiter
+
 
 class Error(Exception):
     """Base class for Errors while fetching emails
@@ -80,7 +82,7 @@ class DCP_Service():
         
         return messages, next_page_token
 
-
+    @ratelimiter.RateLimiter(max_calls=1, period=1)
     def get_html_message(self, message_id: str) -> str:
         """Parse the content of the message and return 
         only the HTML content that we are interested in.
@@ -97,6 +99,7 @@ class DCP_Service():
         """
 
         MIME_TYPE = 'text/html'
+        logging.info('Fetching email %s', message_id)
         message = self._gmail_service.get_message_content(message_id)
         parts = message.get('parts', [])
         html_parts = filter(lambda p: p.get('mimeType', None) == MIME_TYPE, parts)
@@ -114,7 +117,7 @@ class DCP_Service():
         else:
             return None
 
-
+    @ratelimiter.RateLimiter(max_calls=1, period=1)
     def get_text_message(self, message_id: str) -> str:
         """Parse the content of the message and return 
         only the text content that we are interested in.
@@ -131,6 +134,7 @@ class DCP_Service():
         """
 
         MIME_TYPE = 'text/plain'
+        logging.info('Fetching email %s', message_id)
         message = self._gmail_service.get_message_content(message_id)
         parts = message.get('parts', [])
         text_parts = filter(lambda p: p.get('mimeType', None) == MIME_TYPE, parts)
