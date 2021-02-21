@@ -83,7 +83,7 @@ class DCP_Service():
         return messages, next_page_token
 
     @ratelimiter.RateLimiter(max_calls=1, period=1)
-    def get_html_message(self, message_id: str) -> str:
+    def get_html_message(self, message_id: str) -> Tuple(str, str):
         """Parse the content of the message and return 
         only the HTML content that we are interested in.
 
@@ -91,7 +91,7 @@ class DCP_Service():
             message_id: Unique identifier of the message
 
         Returns:
-            A single html message if present
+            A tuple of subject, html message if present
 
         Raises:
             InvalidMessageError: If the message id is not found
@@ -100,7 +100,10 @@ class DCP_Service():
 
         MIME_TYPE = 'text/html'
         logging.info('Fetching email %s', message_id)
+
         message = self._gmail_service.get_message_content(message_id)
+        subject = self._gmail_service.get_message_subject(message)
+
         parts = message.get('parts', [])
         html_parts = filter(lambda p: p.get('mimeType', None) == MIME_TYPE, parts)
 
@@ -113,12 +116,12 @@ class DCP_Service():
             raise TooManyHtmlParts
 
         if data_parts:
-            return data_parts[0]
+            return subject, data_parts[0]
         else:
-            return None
+            return subject, None
 
     @ratelimiter.RateLimiter(max_calls=1, period=1)
-    def get_text_message(self, message_id: str) -> str:
+    def get_text_message(self, message_id: str) -> Tuple(str, str):
         """Parse the content of the message and return 
         only the text content that we are interested in.
 
@@ -135,7 +138,10 @@ class DCP_Service():
 
         MIME_TYPE = 'text/plain'
         logging.info('Fetching email %s', message_id)
+
         message = self._gmail_service.get_message_content(message_id)
+        subject = self._gmail_service.get_message_subject(message)
+        
         parts = message.get('parts', [])
         text_parts = filter(lambda p: p.get('mimeType', None) == MIME_TYPE, parts)
 
@@ -148,9 +154,9 @@ class DCP_Service():
             raise TooManyTextParts
 
         if data_parts:
-            return data_parts[0]
+            return subject, data_parts[0]
         else:
-            return None
+            return subject, None
 
 
     def get_solution_links_from_html(self, message: str) -> Sequence[str]:
