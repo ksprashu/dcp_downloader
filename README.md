@@ -22,16 +22,13 @@ Follow the guide (here)[https://developers.google.com/gmail/api/quickstart/pytho
 
 3. Download the credentials json and save it into the `config` folder
 
-5. Run the following programs
-
-Download the list of emails
-`$ python download_emails.py`
-
-Download the list of links from the emails
-`$ python download_links.py`
-
-Download the solution content from the links
-`$ python download_solutions.py`
+5. Run the following programs\
+    a. Download the list of emails\
+    `$ python download_emails.py`\
+    b. Download the list of links from the emails\
+    `$ python download_links.py`\
+    c. Download the solution content from the links\
+    `$ python download_solutions.py`
 
 Commands in Step 5 can be run iteratively and independently to fetch new content.
 
