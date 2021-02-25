@@ -115,8 +115,8 @@ class Credential():
             logging.info('Refreshing the token')
             cred.refresh(requests.Request())
         except:
-            cred = None # clear the token that was passed in
-            raise
+            logging.warn('Error trying to refresh the token!')
+            cred = self._get_new_token()
 
         return cred
         
